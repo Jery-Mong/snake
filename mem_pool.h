@@ -4,9 +4,10 @@
 struct mem_pool_struct {
 	unsigned int item_max_quantum;
 	int item_size;
-	void **stack_end;
-	unsigned int item_cnt;
-	unsigned int malloc_cnt;
+	void **available;
+	unsigned int avail_cnt;
+	void **used;
+	unsigned int total_malloc;
 };
 typedef struct mem_pool_struct mem_pool_t;
 

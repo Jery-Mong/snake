@@ -12,5 +12,10 @@ struct node {
 	unsigned int x;
 	unsigned int y;
 };
-
+struct record {
+	char name[32];
+	unsigned int score;
+	char date[32];
+	int cur;
+};
 #endif
