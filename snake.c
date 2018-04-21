@@ -21,20 +21,23 @@ int real_x = 92;
 int real_y = 28;
 
 
+int g_speed = 100000;
+
 struct segment *snake_head;
 pthread_mutex_t sync_lock;
 pthread_mutex_t run_lock;
 
-#define APPLE_NR 2
+#define APPLE_NR 3
 struct node apple[APPLE_NR];
 
 mem_pool_t snake_pool = {50, sizeof(struct segment), NULL, 0, 0};
 
-#define SHOW(x, y, count) do{ for (int i = 0; i < (count); i++) {	\
-			wmove(game_erea,(y),(x));			\
-			waddch(game_erea, ' ' | A_REVERSE);		\
-		}							\
-	} while (0)
+#define SHOW(x, y, count) do {for (int i = 0; i < (count); i++) {	\
+								wmove(game_erea,(y),(x));			\
+								waddch(game_erea, ' ' | A_REVERSE);		\
+								waddch(game_erea, ' ' | A_REVERSE);		\
+							  }							\
+						} while (0)
 
 void paint_apple()
 {
@@ -42,7 +45,7 @@ void paint_apple()
 	
 	for (i = 0; i < APPLE_NR; i++) {
 		wmove(game_erea, apple[i].y, apple[i].x);
-		waddch(game_erea, ' ' | A_REVERSE);
+		waddch(game_erea, 'A' | A_REVERSE);
 	}
 }
 
@@ -72,15 +75,6 @@ void paint_seg(struct segment *p)
 	}	
 	paint_seg(p->next);	
 }
-int ntoa(unsigned int num, char *buf)	
-{
-	buf[0] = num / 1000 + '0';
-	buf[1] = (num / 100) % 10 + '0';
-	buf[2] = (num / 10) % 10 + '0';
-	buf[3] = num % 10 + '0';
-	buf[4] = '\0';
-	return 0;	
-}
 
 #define for_each_segment(iter, head) for(iter = head; iter; iter = iter->next)
 
@@ -104,8 +98,8 @@ unsigned int count_node()
 void paint_node_nr()
 {
 	char buf[10] = {0};
-	ntoa(count_node(), buf);
-	wmove(game_erea ,0 ,0);
+	sprintf(buf, "%d", count_node());
+	wmove(game_erea, 0, 0);
 	waddstr(game_erea, buf);
 }
 void display()
@@ -200,6 +194,9 @@ int eat_apple()
 		if (snake_head->x == apple[i].x && snake_head->y == apple[i].y) {
 			snake_head->count++;
 			update_apple(i);
+			
+			g_speed -= g_speed * 0.01;
+
 			return 1;
 		}
 	}
@@ -291,15 +288,22 @@ int get_arrow_key(void)
 	int key;
 	
 	switch (wgetch(game_erea)) {
+	case 'a':
 	case KEY_LEFT:
 		key = RIGHT_TO_LEFT;
 		break;
+
+	case 'd':
 	case KEY_RIGHT:
 		key = LEFT_TO_RIGHT;
 		break;
+
+	case 'w':
 	case KEY_UP:
 		key = DOWN_TO_UP;
 		break;
+
+	case 's':
 	case KEY_DOWN:
 		key = UP_TO_DOWN;
 		break;
@@ -367,15 +371,17 @@ int main(void)
 	mem_pool_init(&snake_pool);
 	noecho();
 	
-	struct segment *tt = (struct segment *)item_pop(&snake_pool);
-	tt->x = 15;
-	tt->y = 20;
-	tt->dir = LEFT_TO_RIGHT;
-	tt->count = 15;
-	tt->pre = tt;
-	tt->next = NULL;
-	
-	snake_head = tt;
+	snake_head = (struct segment *)item_pop(&snake_pool);
+
+	if (NULL == snake_head)
+		return -1;
+
+	snake_head->x = 15;
+	snake_head->y = 20;
+	snake_head->dir = LEFT_TO_RIGHT;
+	snake_head->count = 15;
+	snake_head->pre = snake_head;
+	snake_head->next = NULL;
 	
 	pthread_create(&tid, NULL, guide_snake, NULL);
 
@@ -389,7 +395,13 @@ int main(void)
 		}
 		pthread_mutex_unlock(&sync_lock);
 		display();
-		usleep(100000);
+
+		if (snake_head->dir == LEFT_TO_RIGHT ||
+			snake_head->dir == RIGHT_TO_LEFT)
+			usleep(g_speed);
+		else 
+			usleep(g_speed * 2.5);
+
 	}
 	return 0;
 }
